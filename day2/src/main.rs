@@ -1,6 +1,9 @@
 use std::fs::File;
 use std::io::{self, BufRead};
 
+extern crate clap;
+use clap::{Arg, App, SubCommand};
+
 #[derive(Debug)]
 struct Entry {
 	min: usize,
@@ -17,7 +20,28 @@ impl Entry {
 }
 
 fn main() {
-	let filename = "./input";
+	let matches = App::new("day 2")
+                          .arg(Arg::with_name("INPUT")
+                               .help("Sets the input file to use")
+                               .required(true)
+                               .index(1))
+                          // .arg(Arg::with_name("v")
+                          //      .short("v")
+                          //      .multiple(true)
+                          //      .help("Sets the level of verbosity"))
+                          // .subcommand(SubCommand::with_name("test")
+                          //             .about("controls testing features")
+                          //             .version("1.3")
+                          //             .author("Someone E. <someone_else@other.com>")
+                          //             .arg(Arg::with_name("debug")
+                          //                 .short("d")
+                          //                 .help("print debug information verbosely")))
+                          .get_matches();
+
+
+	let filename = matches.value_of("INPUT").unwrap();
+	println!("Using input file: {}", filename);
+
 	let file = File::open(filename).expect("failed to open");
 
 	let buf = io::BufReader::new(file);
