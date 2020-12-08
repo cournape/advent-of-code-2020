@@ -33,13 +33,14 @@ fn main() {
 			let n_trees = solve_main_problem(&filename).unwrap();
 			println!("Encountered {} trees", n_trees);
 		},
-		_ => {
-			panic!("Not supported yet");
+		1 | _ => {
+			let n_trees = solve_aux_problem(&filename).unwrap();
+			println!("Encountered {} trees", n_trees);
 		}
 	}
 }
 
-fn solve_main_problem(filename: &String) -> Result<usize, &'static str> {
+fn parse_grid(filename: &String) -> Result<Array2D::<LocationKind>, &'static str> {
 	let file = File::open(filename).expect("failed to open");
 
 	let buf = io::BufReader::new(file);
@@ -70,19 +71,42 @@ fn solve_main_problem(filename: &String) -> Result<usize, &'static str> {
 		}
 	}
 
-	let grid = Array2D::from_rows(&data);
+	return Ok(Array2D::from_rows(&data));
+}
 
+fn solve_for_slope(grid: &Array2D<LocationKind>, right: usize, down: usize) -> Result<usize, &'static str> {
 	let mut j = 0;
 	let mut n_trees = 0;
 
-	for i in 0..grid.num_rows() {
+	for i in (0..grid.num_rows()).step_by(down) {
 		let pos = grid[(i, j % grid.num_columns())];
 		match pos {
 			LocationKind::Tree => n_trees += 1,
 			LocationKind::OpenSquare => (),
 		}
-		j += 3;
+		j += right;
 	}
 
 	Ok(n_trees)
+}
+
+fn solve_main_problem(filename: &String) -> Result<usize, &'static str> {
+	let grid = parse_grid(filename).unwrap();
+	let n_trees = solve_for_slope(&grid, 3, 1).unwrap();
+
+	Ok(n_trees)
+}
+
+fn solve_aux_problem(filename: &String) -> Result<usize, &'static str> {
+	let grid = parse_grid(filename).unwrap();
+	let pairs = vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
+
+	let mut prod = 1;
+
+	for (right, down) in pairs {
+		let n_trees = solve_for_slope(&grid, right, down).unwrap();
+		prod *= n_trees;
+	};
+
+	Ok(prod)
 }
