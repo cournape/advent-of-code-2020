@@ -1,3 +1,5 @@
+#[macro_use] extern crate lazy_static;
+
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -71,8 +73,10 @@ fn has_valid_values(data: &String) -> bool {
 	if !has_valid_fields(data) {
 		return false;
 	}
-	let hcl_re = Regex::new(r"^#[0-9a-f]{6}$").unwrap();
-	let pid_re = Regex::new(r"^\d{9}$").unwrap();
+	lazy_static! {
+		static ref HCL_RE: Regex = Regex::new(r"^#[0-9a-f]{6}$").unwrap();
+		static ref PID_RE: Regex = Regex::new(r"^\d{9}$").unwrap();
+	}
 
 	for part in data.split_whitespace() {
 		let pos = part.find(":").unwrap();
@@ -114,7 +118,7 @@ fn has_valid_values(data: &String) -> bool {
 				}
 			},
 			"hcl" => {
-				if value.len() != 7 || !hcl_re.is_match(value) {
+				if value.len() != 7 || !HCL_RE.is_match(value) {
 					return  false;
 				}
 			},
@@ -125,7 +129,7 @@ fn has_valid_values(data: &String) -> bool {
 				}
 			},
 			"pid" => {
-				if !pid_re.is_match(value) {
+				if !PID_RE.is_match(value) {
 					return false;
 				}
 			},
