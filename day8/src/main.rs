@@ -5,10 +5,11 @@ use std::io::{self, BufRead};
 extern crate clap;
 use clap::{App, Arg};
 
+#[derive(Clone, Copy)]
 enum Opcode {
     AccKind(isize),
     JumpKind(isize),
-    NopKind,
+    NopKind(isize),
 }
 
 fn main() {
@@ -32,26 +33,67 @@ fn main() {
 
     match matches.occurrences_of("part-two") {
         0 => {
-            let acc = solve_problem(&filename);
+            let acc = solve_problem_1(&filename);
             println!("Value of acc at termination: {}", acc);
         }
         1 | _ => {
-            panic!("Not implemented");
+            let acc = solve_problem_2(&filename);
+            println!("Value of acc at termination: {}", acc);
         }
     }
 }
 
-fn solve_problem(filename: &String) -> isize {
+fn solve_problem_1(filename: &String) -> isize {
     let instructions = parse_instructions(filename);
-    run_vm(instructions)
+    let (acc, _) = run_vm(&instructions);
+    acc
 }
 
-fn run_vm(instructions: Vec<Opcode>) -> isize {
+fn solve_problem_2(filename: &String) -> isize {
+    let instructions = parse_instructions(filename);
+    let mut instructions = instructions.clone(); 
+    let n_instructions = instructions.len();
+
+    for i in 0..n_instructions {
+        let old_opcode = instructions[i];
+        match old_opcode {
+            Opcode::NopKind(value) => {
+                instructions[i] = Opcode::JumpKind(value);
+                let (acc, ip) = run_vm(&instructions);
+                instructions[i] = old_opcode;
+                if ip == n_instructions {
+                    return acc;
+                }
+            },
+            Opcode::JumpKind(value) => {
+                instructions[i] = Opcode::NopKind(value);
+                let (acc, ip) = run_vm(&instructions);
+                instructions[i] = old_opcode;
+                if ip == n_instructions {
+                    return acc;
+                }
+            },
+            Opcode::AccKind(_) => (),
+        };
+    }
+
+    panic!("Could not fix instructions !");
+}
+
+fn run_vm(instructions: &Vec<Opcode>) -> (isize, usize) {
+    let n_instructions = instructions.len();
+
     let mut acc: isize = 0;
     let mut ip: usize = 0;
     let mut visited = HashSet::new();
 
     while !visited.contains(&ip) {
+        if ip > n_instructions {
+            panic!("Overflow !");
+        } else if ip == n_instructions {
+            return (acc, ip);
+        }
+
         visited.insert(ip);
 
         let opcode = &instructions[ip];
@@ -61,7 +103,7 @@ fn run_vm(instructions: Vec<Opcode>) -> isize {
                 ip += 1;
                 acc += value;
             }
-            Opcode::NopKind => {
+            Opcode::NopKind(_) => {
                 ip += 1;
             }
             Opcode::JumpKind(jump) => {
@@ -74,7 +116,7 @@ fn run_vm(instructions: Vec<Opcode>) -> isize {
         };
     }
 
-    acc
+    (acc, ip)
 }
 
 fn parse_instructions(filename: &String) -> Vec<Opcode> {
@@ -87,11 +129,12 @@ fn parse_instructions(filename: &String) -> Vec<Opcode> {
         let line = line.unwrap();
         let mut iter = line.split_whitespace();
         let opcode_string = iter.next().unwrap();
+        let value = iter.next().unwrap().parse().unwrap();
         let opcode = match opcode_string {
-            "acc" => Opcode::AccKind(iter.next().unwrap().parse().unwrap()),
-            "jmp" => Opcode::JumpKind(iter.next().unwrap().parse().unwrap()),
-            "nop" => Opcode::NopKind,
-            _ => panic!("yolo"),
+            "acc" => Opcode::AccKind(value),
+            "jmp" => Opcode::JumpKind(value),
+            "nop" => Opcode::NopKind(value),
+            _ => panic!("Unknown opcode: {}", opcode_string),
         };
         instructions.push(opcode);
     }
