@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::{self, BufRead};
 
 type Grid2D = Vec<Vec<LocationKind>>;
+type ShouldOccupyCallback = dyn Fn(&Grid2D, usize, usize) -> bool;
+type ShouldEmptyCallback = dyn Fn(&Grid2D, usize, usize) -> bool;
 
 extern crate clap;
 use clap::{App, Arg};
@@ -16,7 +18,6 @@ enum LocationKind{
 
 struct Neighborhood {
     // neighborhood boundaries
-    row_begin: usize,
     row_end: usize,
     col_begin: usize,
     col_end: usize,
@@ -33,7 +34,6 @@ impl Neighborhood {
         let row_begin = cmp::max(i as isize - 1 , 0) as usize;
         let col_begin = cmp::max(j as isize - 1 , 0) as usize;
         Neighborhood {
-            row_begin: row_begin,
             row_end: cmp::min(i + 2, n_rows),
             col_begin: col_begin,
             col_end: cmp::min(j + 2, n_cols),
@@ -96,11 +96,11 @@ fn main() {
 
     match matches.occurrences_of("part-two") {
         0 => {
-            let count = solve_part1(&filename);
+            let count = solve_part(&filename, &should_occupy_part1, &should_empty_part1);
             println!("Found {} occupied seats", count);
         }
         1 | _ => {
-            let count = solve_part2(&filename);
+            let count = solve_part(&filename, &should_occupy_part2, &should_empty_part2);
             println!("Found {} occupied seats", count);
         }
     }
@@ -130,6 +130,8 @@ fn parse_grid(filename: &String) -> Grid2D {
     grid
 }
 
+// For debugging purpose
+#[allow(dead_code)]
 fn draw_grid(grid: &Grid2D) -> () {
     for row in grid.iter() {
         for element in row.iter() {
@@ -146,7 +148,7 @@ fn draw_grid(grid: &Grid2D) -> () {
 
 // If a seat is empty (L) and there are no occupied seats adjacent to it, the seat becomes
 // occupied.
-fn should_occupy(grid: &Grid2D, m: usize, n: usize) -> bool {
+fn should_occupy_part1(grid: &Grid2D, m: usize, n: usize) -> bool {
     let neigh = Neighborhood::new(grid.len(), grid[0].len(), m, n);
     for (i, j) in neigh {
         match grid[i][j] {
@@ -159,7 +161,7 @@ fn should_occupy(grid: &Grid2D, m: usize, n: usize) -> bool {
 
 // If a seat is occupied (#) and four or more seats adjacent to it are also occupied, the seat
 // becomes empty.
-fn should_empty(grid: &Grid2D, m: usize, n: usize) -> bool {
+fn should_empty_part1(grid: &Grid2D, m: usize, n: usize) -> bool {
     let neigh = Neighborhood::new(grid.len(), grid[0].len(), m, n);
     let mut occupied = 0;
     for (i, j) in neigh {
@@ -174,8 +176,20 @@ fn should_empty(grid: &Grid2D, m: usize, n: usize) -> bool {
     false
 }
 
-// make change in place
-fn make_pass(grid: &mut Grid2D) -> bool {
+fn should_occupy_part2(grid: &Grid2D, m: usize, n: usize) -> bool {
+    let (_, occupied) = look_in_all_directions(&grid, m, n);
+    return occupied == 0;
+}
+
+fn should_empty_part2(grid: &Grid2D, m: usize, n: usize) -> bool {
+    let (_, occupied) = look_in_all_directions(&grid, m, n);
+    return occupied >= 5;
+}
+
+// make change to grid in place
+fn make_pass(grid: &mut Grid2D,
+    should_occupy: &ShouldOccupyCallback, should_empty: &ShouldEmptyCallback,
+    ) -> bool {
     let mut new_state = grid.clone();
     let mut has_changed = false;
 
@@ -225,13 +239,12 @@ fn count_occupied_seats(grid: &Grid2D) -> usize {
     count
 }
 
-fn solve_part1(filename: &String) -> usize {
+fn solve_part(filename: &String, should_occupy: &ShouldOccupyCallback, should_empty: &ShouldEmptyCallback) -> usize {
     let mut grid = parse_grid(&filename);
 
-    for i in 0..1000 {
-        let has_changed = make_pass(&mut grid);
+    for _i in 0..1000 {
+        let has_changed = make_pass(&mut grid, should_occupy, should_empty);
         if !has_changed {
-            // draw_grid(&grid);
             return count_occupied_seats(&grid);
         }
     }
@@ -375,61 +388,4 @@ fn look_in_all_directions(grid: &Grid2D, x: usize, y: usize) -> (usize, usize) {
     }
 
     return (empty, occupied);
-}
-
-fn should_occupy_part2(grid: &Grid2D, m: usize, n: usize) -> bool {
-    let (empty, occupied) = look_in_all_directions(&grid, m, n);
-    return occupied == 0;
-}
-
-fn should_empty_part2(grid: &Grid2D, m: usize, n: usize) -> bool {
-    let (empty, occupied) = look_in_all_directions(&grid, m, n);
-    return occupied >= 5;
-}
-
-// make change in place
-fn make_pass_part2(grid: &mut Grid2D) -> bool {
-    let mut new_state = grid.clone();
-    let mut has_changed = false;
-
-    for i in 0..grid.len() {
-        for j in 0..grid[i].len() {
-            match grid[i][j] {
-                LocationKind::Empty => {
-                    if should_occupy_part2(&grid, i, j) {
-                        has_changed = true;
-                        new_state[i][j] = LocationKind::Occupied;
-                    }
-                },
-                LocationKind::Occupied => {
-                    if should_empty_part2(&grid, i, j) {
-                        has_changed = true;
-                        new_state[i][j] = LocationKind::Empty;
-                    } 
-                },
-                LocationKind::Floor => (),
-            }
-        }
-    }
-
-    for i in 0..grid.len() {
-        for j in 0..grid[i].len() {
-            grid[i][j] = new_state[i][j];
-        }
-    }
-
-    has_changed
-}
-
-fn solve_part2(filename: &String) -> usize {
-    let mut grid = parse_grid(&filename);
-
-    for i in 0..1000 {
-        let has_changed = make_pass_part2(&mut grid);
-        if !has_changed {
-            // draw_grid(&grid);
-            return count_occupied_seats(&grid);
-        }
-    }
-    panic!("over max number of iteration");
 }
