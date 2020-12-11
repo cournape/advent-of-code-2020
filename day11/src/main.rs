@@ -100,7 +100,8 @@ fn main() {
             println!("Found {} occupied seats", count);
         }
         1 | _ => {
-            panic!("not implemented yet");
+            let count = solve_part2(&filename);
+            println!("Found {} occupied seats", count);
         }
     }
 }
@@ -229,6 +230,202 @@ fn solve_part1(filename: &String) -> usize {
 
     for i in 0..1000 {
         let has_changed = make_pass(&mut grid);
+        if !has_changed {
+            // draw_grid(&grid);
+            return count_occupied_seats(&grid);
+        }
+    }
+    panic!("over max number of iteration");
+}
+
+fn look_in_all_directions(grid: &Grid2D, x: usize, y: usize) -> (usize, usize) {
+    let mut empty = 0;
+    let mut occupied = 0;
+
+    let n_rows = grid.len();
+    let n_cols = grid[0].len();
+
+    // relative to x, open limit
+    let max_north = x + 1;
+    // relative to x, open limit
+    let max_south = n_rows - x;
+    // relative to y, open limit
+    let max_east = n_cols - y;
+    // relative to y, open limit
+    let max_west = y + 1;
+
+    // North
+    for j in 1..max_north {
+        match grid[x - j][y] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // North-East
+    for j in 1..cmp::min(max_north, max_east) {
+        match grid[x - j][y + j] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // East
+    for j in 1..max_east {
+        match grid[x][y + j] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // South East
+    for j in 1..cmp::min(max_south, max_east) {
+        match grid[x + j][y + j] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // South
+    for j in 1..max_south {
+        match grid[x + j][y] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // South West
+    for j in 1..cmp::min(max_south, max_west) {
+        match grid[x + j][y - j] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // West
+    for j in 1..max_west {
+        match grid[x][y - j] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    // North West
+    for j in 1..cmp::min(max_west, max_north) {
+        match grid[x - j][y - j] {
+            LocationKind::Occupied => {
+                occupied += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                empty += 1;
+                break;
+            },
+            _ => (),
+        }
+    }
+
+    return (empty, occupied);
+}
+
+fn should_occupy_part2(grid: &Grid2D, m: usize, n: usize) -> bool {
+    let (empty, occupied) = look_in_all_directions(&grid, m, n);
+    return occupied == 0;
+}
+
+fn should_empty_part2(grid: &Grid2D, m: usize, n: usize) -> bool {
+    let (empty, occupied) = look_in_all_directions(&grid, m, n);
+    return occupied >= 5;
+}
+
+// make change in place
+fn make_pass_part2(grid: &mut Grid2D) -> bool {
+    let mut new_state = grid.clone();
+    let mut has_changed = false;
+
+    for i in 0..grid.len() {
+        for j in 0..grid[i].len() {
+            match grid[i][j] {
+                LocationKind::Empty => {
+                    if should_occupy_part2(&grid, i, j) {
+                        has_changed = true;
+                        new_state[i][j] = LocationKind::Occupied;
+                    }
+                },
+                LocationKind::Occupied => {
+                    if should_empty_part2(&grid, i, j) {
+                        has_changed = true;
+                        new_state[i][j] = LocationKind::Empty;
+                    } 
+                },
+                LocationKind::Floor => (),
+            }
+        }
+    }
+
+    for i in 0..grid.len() {
+        for j in 0..grid[i].len() {
+            grid[i][j] = new_state[i][j];
+        }
+    }
+
+    has_changed
+}
+
+fn solve_part2(filename: &String) -> usize {
+    let mut grid = parse_grid(&filename);
+
+    for i in 0..1000 {
+        let has_changed = make_pass_part2(&mut grid);
         if !has_changed {
             // draw_grid(&grid);
             return count_occupied_seats(&grid);
