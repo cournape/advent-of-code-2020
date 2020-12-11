@@ -251,6 +251,22 @@ fn solve_part(filename: &String, should_occupy: &ShouldOccupyCallback, should_em
     panic!("over max number of iteration");
 }
 
+macro_rules! find_occupied_or_empty {
+    ($match:expr, $a:expr, $b:expr) => {
+        match $match {
+            LocationKind::Occupied => {
+                $a += 1;
+                break;
+            },
+            LocationKind::Empty => {
+                $b += 1;
+                break;
+            },
+            _ => (),
+        }
+    };
+}
+
 fn look_in_all_directions(grid: &Grid2D, x: usize, y: usize) -> (usize, usize) {
     let mut empty = 0;
     let mut occupied = 0;
@@ -269,122 +285,42 @@ fn look_in_all_directions(grid: &Grid2D, x: usize, y: usize) -> (usize, usize) {
 
     // North
     for j in 1..max_north {
-        match grid[x - j][y] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x - j][y], occupied, empty);
     }
 
     // North-East
     for j in 1..cmp::min(max_north, max_east) {
-        match grid[x - j][y + j] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x - j][y + j], occupied, empty);
     }
 
     // East
     for j in 1..max_east {
-        match grid[x][y + j] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x][y + j], occupied, empty);
     }
 
     // South East
     for j in 1..cmp::min(max_south, max_east) {
-        match grid[x + j][y + j] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x + j][y + j], occupied, empty);
     }
 
     // South
     for j in 1..max_south {
-        match grid[x + j][y] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x + j][y], occupied, empty);
     }
 
     // South West
     for j in 1..cmp::min(max_south, max_west) {
-        match grid[x + j][y - j] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x + j][y - j], occupied, empty);
     }
 
     // West
     for j in 1..max_west {
-        match grid[x][y - j] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x][y - j], occupied, empty);
     }
 
     // North West
     for j in 1..cmp::min(max_west, max_north) {
-        match grid[x - j][y - j] {
-            LocationKind::Occupied => {
-                occupied += 1;
-                break;
-            },
-            LocationKind::Empty => {
-                empty += 1;
-                break;
-            },
-            _ => (),
-        }
+        find_occupied_or_empty!(grid[x - j][y - j], occupied, empty);
     }
 
     return (empty, occupied);
