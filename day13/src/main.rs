@@ -24,14 +24,36 @@ fn main() {
 
     match matches.occurrences_of("part-two") {
         0 => {
-            let (start_time, bus_ids) = parse_data(&filename);
-            println!("Start timestamp: {}", start_time);
-            println!("bus ids are: {:?}", bus_ids);
+            let sol = solve_problem1(&filename);
+            println!("Solution part 1: {}", sol);
         }
         1 | _ => {
             panic!("Not implemented yet");
         }
     }
+}
+
+fn solve_problem1(filename: &String) -> usize {
+    let (start_time, bus_ids) = parse_data(&filename);
+    let modulos: Vec<usize> = bus_ids.iter().map(|bus_id| bus_id - start_time % bus_id).collect();
+
+    // argmin
+    if modulos.len() < 1 {
+        panic!("Unexpected vector size");
+    }
+
+    let mut min = modulos[0];
+    let mut i_min = 0;
+    for (i, val) in modulos.iter().enumerate() {
+        if *val < min {
+            min = *val;
+            i_min = i;
+        }
+    }
+
+    let first_bus_id = bus_ids[i_min];
+
+    first_bus_id * min
 }
 
 fn parse_data(filename: &String) ->  (usize, Vec<usize>) {
